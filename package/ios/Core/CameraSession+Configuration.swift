@@ -305,9 +305,14 @@ extension CameraSession {
   Configures manual focus
    */
    func configureManualFocus(configuration: CameraConfiguration, device: AVCaptureDevice) {
+   ReactLogger.log(level: .info, message: "Enter Manual Focusing")
     guard let manualFocus = configuration.manualFocus else {
         return
     }
+    if (configuration.enableManualFocus != true) {
+        ReactLogger.log(level: .info, message: "Manual Focus is not enabled")
+    }
+    ReactLogger.log(level: .info, message: "Manually focusing")
     device.setFocusModeLocked(lensPosition: manualFocus)
    }
 
