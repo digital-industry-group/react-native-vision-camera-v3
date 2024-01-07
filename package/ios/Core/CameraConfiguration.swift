@@ -42,6 +42,10 @@ class CameraConfiguration {
   // Exposure
   var exposure: Float?
 
+  // Manual Focus
+  var enableManualFocus: Bool?
+  var manualFocus: Float?
+
   // isActive (Start/Stop)
   var isActive = false
 
@@ -63,6 +67,8 @@ class CameraConfiguration {
       torch = other.torch
       zoom = other.zoom
       exposure = other.exposure
+      manualFocus = other.manualFocus
+      enableManualFocus = other.enableManualFocus
       isActive = other.isActive
       audio = other.audio
     } else {
@@ -82,6 +88,7 @@ class CameraConfiguration {
     let torchChanged: Bool
     let zoomChanged: Bool
     let exposureChanged: Bool
+    let manualFocusChanged: Bool
 
     let audioSessionChanged: Bool
 
@@ -121,6 +128,9 @@ class CameraConfiguration {
       zoomChanged = formatChanged || left?.zoom != right.zoom
       // exposure (depends on device)
       exposureChanged = inputChanged || left?.exposure != right.exposure
+      // manualFocus (depends on device)
+      let manualFocusValueChanged = right.enableManualFocus == true && left?.manualFocus != right.manualFocus
+      manualFocusChanged = inputChanged || left?.enableManualFocus != right.enableManualFocus || manualFocusValueChanged
 
       // audio session
       audioSessionChanged = left?.audio != right.audio

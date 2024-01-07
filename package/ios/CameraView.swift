@@ -47,6 +47,8 @@ public final class CameraView: UIView, CameraSessionDelegate {
   @objc var torch = "off"
   @objc var zoom: NSNumber = 1.0 // in "factor"
   @objc var exposure: NSNumber = 1.0
+  @objc var manualFocus: NSNumber = 0.5
+  @objc var enableManualFocus = false
   @objc var enableFpsGraph = false
   @objc var videoStabilizationMode: NSString?
   @objc var resizeMode: NSString = "cover" {
