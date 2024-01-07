@@ -299,6 +299,18 @@ extension CameraSession {
     device.setExposureTargetBias(clamped)
   }
 
+  // pragma MARK: ManualFocus
+
+  /**
+  Configures manual focus
+   */
+   func configureManualFocus(configuration: CameraConfiguration, device: AVCaptureDevice) {
+    guard let manualFocus = configuration.manualFocus else {
+        return
+    }
+    device.setFocusModeLocked(lensPosition: manualFocus)
+   }
+
   // pragma MARK: Audio
 
   /**
