@@ -85,8 +85,4 @@ RCT_EXTERN_METHOD(focus
                   : (NSDictionary*)point resolve
                   : (RCTPromiseResolveBlock)resolve reject
                   : (RCTPromiseRejectBlock)reject);
-RCT_EXTERN_METHOD(getFocusValue
-                  : (nonnull NSNumber*)node
-)
-
 @end

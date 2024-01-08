@@ -84,13 +84,6 @@ final class CameraViewManager: RCTViewManager {
   }
 
   @objc
-  final func getFocusValue(_ node: NSNumber) -> NSNumber {
-    let component = getCameraView(withTag: node)
-    let focusValue = component.getFocusValue()
-    return focusValue
-  }
-
-  @objc
   final func getCameraPermissionStatus() -> String {
     let status = AVCaptureDevice.authorizationStatus(for: .video)
     return status.descriptor

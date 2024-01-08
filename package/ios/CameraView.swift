@@ -150,10 +150,6 @@ public final class CameraView: UIView, CameraSessionDelegate {
     return .off
   }
 
-  func getFocusValue() -> NSNumber {
-    return cameraSession.getCurrentLensPosition()
-  }
-
   // pragma MARK: Props updating
   override public final func didSetProps(_ changedProps: [String]!) {
     ReactLogger.log(level: .info, message: "Updating \(changedProps.count) props: [\(changedProps.joined(separator: ", "))]")
