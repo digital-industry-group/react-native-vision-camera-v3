@@ -1,6 +1,6 @@
 {
   "name": "@digital-industry-group/react-native-vision-camera-v3",
-  "version": "3.6.21",
+  "version": "3.6.22",
   "description": "A powerful, high-performance React Native Camera library.",
   "main": "lib/commonjs/index",
   "module": "lib/module/index",
