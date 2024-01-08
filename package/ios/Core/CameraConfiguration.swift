@@ -105,7 +105,7 @@ class CameraConfiguration {
      [`formatChanged`, `sidePropsChanged`, `zoomChanged`, `exposureChanged`]
      */
     var isDeviceConfigurationDirty: Bool {
-      return isSessionConfigurationDirty || formatChanged || sidePropsChanged || zoomChanged || exposureChanged
+      return isSessionConfigurationDirty || formatChanged || sidePropsChanged || zoomChanged || exposureChanged || manualFocusChanged
     }
 
     init(between left: CameraConfiguration?, and right: CameraConfiguration) {
@@ -129,7 +129,7 @@ class CameraConfiguration {
       // exposure (depends on device)
       exposureChanged = inputChanged || left?.exposure != right.exposure
       // manualFocus (depends on device)
-      manualFocusChanged = inputChanged || left?.enableManualFocus != right.enableManualFocus || left?.manualFocus != right.manualFocus
+      manualFocusChanged = inputChanged || left?.manualFocus != right.manualFocus
 
       // audio session
       audioSessionChanged = left?.audio != right.audio
