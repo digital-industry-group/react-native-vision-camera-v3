@@ -129,8 +129,7 @@ class CameraConfiguration {
       // exposure (depends on device)
       exposureChanged = inputChanged || left?.exposure != right.exposure
       // manualFocus (depends on device)
-      let manualFocusValueChanged = right.enableManualFocus == true && left?.manualFocus != right.manualFocus
-      manualFocusChanged = inputChanged || left?.enableManualFocus != right.enableManualFocus || manualFocusValueChanged
+      manualFocusChanged = inputChanged || left?.enableManualFocus != right.enableManualFocus || left?.manualFocus != right.manualFocus
 
       // audio session
       audioSessionChanged = left?.audio != right.audio

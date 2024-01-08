@@ -291,6 +291,7 @@ extension CameraSession {
    Configures exposure (`exposure`) as a bias that adjusts exposureTime and ISO.
    */
   func configureExposure(configuration: CameraConfiguration, device: AVCaptureDevice) {
+  ReactLogger.log(level: .info, message: "Enter Exposure")
     guard let exposure = configuration.exposure else {
       return
     }
