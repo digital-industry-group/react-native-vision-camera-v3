@@ -135,6 +135,7 @@ public final class CameraView: UIView, CameraSessionDelegate {
           onError(error)
         } else {
           onError(.unknown(message: error.localizedDescription, cause: error as NSError))
+          onError(.unknown(message: error.localizedDescription, cause: error as NSError))
         }
       }
     }
@@ -147,6 +148,10 @@ public final class CameraView: UIView, CameraSessionDelegate {
       return torch
     }
     return .off
+  }
+
+  func getFocusValue() -> NSNumber {
+
   }
 
   // pragma MARK: Props updating
@@ -225,6 +230,10 @@ public final class CameraView: UIView, CameraSessionDelegate {
 
       // Exposure
       config.exposure = exposure.floatValue
+
+      // Manual Focus
+      config.manualFocus = manualFocus.floatValue
+      config.enableManualFocus = enableManualFocus
 
       // isActive
       config.isActive = isActive

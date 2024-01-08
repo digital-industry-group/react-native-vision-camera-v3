@@ -89,7 +89,7 @@ class CameraConfiguration {
     let zoomChanged: Bool
     let exposureChanged: Bool
     let manualFocusChanged: Bool
-
+    let enableManualFocusChanged: Bool
     let audioSessionChanged: Bool
 
     /**
@@ -105,7 +105,7 @@ class CameraConfiguration {
      [`formatChanged`, `sidePropsChanged`, `zoomChanged`, `exposureChanged`]
      */
     var isDeviceConfigurationDirty: Bool {
-      return isSessionConfigurationDirty || formatChanged || sidePropsChanged || zoomChanged || exposureChanged || manualFocusChanged
+      return isSessionConfigurationDirty || formatChanged || sidePropsChanged || zoomChanged || exposureChanged || manualFocusChanged || enableManualFocusChanged
     }
 
     init(between left: CameraConfiguration?, and right: CameraConfiguration) {
@@ -128,8 +128,10 @@ class CameraConfiguration {
       zoomChanged = formatChanged || left?.zoom != right.zoom
       // exposure (depends on device)
       exposureChanged = inputChanged || left?.exposure != right.exposure
+      // enableManualFocus (depends on device)
+      enableManualFocusChanged = inputChanged || left?.enableManualFocus != right.enableManualFocus
       // manualFocus (depends on device)
-      manualFocusChanged = inputChanged || left?.manualFocus != right.manualFocus
+      manualFocusChanged = inputChanged || left?.manualFocus != right.manualFocus || enableManualFocusChanged
 
       // audio session
       audioSessionChanged = left?.audio != right.audio

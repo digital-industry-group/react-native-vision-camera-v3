@@ -16,6 +16,7 @@
 // Module Functions
 RCT_EXTERN__BLOCKING_SYNCHRONOUS_METHOD(getCameraPermissionStatus);
 RCT_EXTERN__BLOCKING_SYNCHRONOUS_METHOD(getMicrophonePermissionStatus);
+RCT_EXTERN__BLOCKING_SYNCHRONOUS_METHOD(getFocusValue);
 RCT_EXTERN_METHOD(requestCameraPermission : (RCTPromiseResolveBlock)resolve reject : (RCTPromiseRejectBlock)reject);
 RCT_EXTERN_METHOD(requestMicrophonePermission : (RCTPromiseResolveBlock)resolve reject : (RCTPromiseRejectBlock)reject);
 

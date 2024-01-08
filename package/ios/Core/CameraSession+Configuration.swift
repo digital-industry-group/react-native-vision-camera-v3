@@ -311,8 +311,19 @@ extension CameraSession {
     guard let manualFocus = configuration.manualFocus else {
         return
     }
+    if (!device.isLockingFocusWithCustomLensPositionSupported) {
+        ReactLogger.log(level: .info, message: "Locking Focus With Custom Lens Position Is Not Supported")
+        return
+    }
     if (configuration.enableManualFocus != true) {
         ReactLogger.log(level: .info, message: "Manual Focus is not enabled")
+        // Reset Focus to continuous/auto
+        if device.isFocusPointOfInterestSupported {
+          var point = CGPoint(x:0.5, y:0.5)
+          device.focusPointOfInterest = point
+          device.focusMode = .continuousAutoFocus
+        }
+        return
     }
     ReactLogger.log(level: .info, message: "Manually focusing")
     device.setFocusModeLocked(lensPosition: manualFocus)

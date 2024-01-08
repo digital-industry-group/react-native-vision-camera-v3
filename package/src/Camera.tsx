@@ -358,6 +358,10 @@ export class Camera extends React.PureComponent<CameraProps, CameraState> {
   public static getMicrophonePermissionStatus(): CameraPermissionStatus {
     return CameraModule.getMicrophonePermissionStatus()
   }
+
+  public static getFocusValue(): number {
+    return CameraModule.getFocusValue()
+  }
   /**
    * Shows a "request permission" alert to the user, and resolves with the new camera permission status.
    *
