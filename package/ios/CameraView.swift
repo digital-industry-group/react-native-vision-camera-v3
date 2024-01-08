@@ -151,7 +151,7 @@ public final class CameraView: UIView, CameraSessionDelegate {
   }
 
   func getFocusValue() -> NSNumber {
-
+    return cameraSession.getCurrentLensPosition()
   }
 
   // pragma MARK: Props updating

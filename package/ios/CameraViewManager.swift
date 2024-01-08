@@ -86,7 +86,7 @@ final class CameraViewManager: RCTViewManager {
   @objc
   final func getFocusValue(_ node: NSNumber) -> NSNumber {
     let component = getCameraView(withTag: node)
-    let focusValue = component.currentLensPosition
+    let focusValue = component.getFocusValue()
     return focusValue
   }
 
