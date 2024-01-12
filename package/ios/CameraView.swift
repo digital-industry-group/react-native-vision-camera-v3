@@ -47,6 +47,8 @@ public final class CameraView: UIView, CameraSessionDelegate {
   @objc var torch = "off"
   @objc var zoom: NSNumber = 1.0 // in "factor"
   @objc var exposure: NSNumber = 1.0
+  @objc var manualFocus: NSNumber = 0.5
+  @objc var enableManualFocus = false
   @objc var enableFpsGraph = false
   @objc var videoStabilizationMode: NSString?
   @objc var resizeMode: NSString = "cover" {
@@ -133,6 +135,7 @@ public final class CameraView: UIView, CameraSessionDelegate {
         if let error = error as? CameraError {
           onError(error)
         } else {
+          onError(.unknown(message: error.localizedDescription, cause: error as NSError))
           onError(.unknown(message: error.localizedDescription, cause: error as NSError))
         }
       }
@@ -234,6 +237,10 @@ public final class CameraView: UIView, CameraSessionDelegate {
 
       // Exposure
       config.exposure = exposure.floatValue
+
+      // Manual Focus
+      config.manualFocus = manualFocus.floatValue
+      config.enableManualFocus = enableManualFocus
 
       // isActive
       config.isActive = isActive

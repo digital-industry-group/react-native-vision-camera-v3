@@ -10,6 +10,9 @@ import AVFoundation
 import Foundation
 
 extension CameraSession {
+  func getCurrentLensPosition() -> NSNumber {
+    return NSNumber(value: AVCaptureDevice.currentLensPosition)
+  }
   /**
    Focuses the Camera to the specified point. The point must be in the Camera coordinate system, so {0...1} on both axis.
    */
