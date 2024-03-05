@@ -12,37 +12,53 @@
 #import <Foundation/Foundation.h>
 
 #ifdef __cplusplus
-#import "JSITypedArray.h"
 #import <jsi/jsi.h>
 using namespace facebook;
 #endif
 
-// Needs to be in sync with JSITypedArray.h as the index is used
-typedef NS_ENUM(NSInteger, SharedArrayType) {
-  Int8Array,
-  Int16Array,
-  Int32Array,
-  Uint8Array,
-  Uint8ClampedArray,
-  Uint16Array,
-  Uint32Array,
-  Float32Array,
-  Float64Array,
-};
+NS_ASSUME_NONNULL_BEGIN
 
+/**
+ * An ArrayBuffer of type uint8 that can be shared between native and JS without copying.
+ */
 @interface SharedArray : NSObject
 
-- (instancetype _Nonnull)init NS_UNAVAILABLE;
+- (instancetype)init NS_UNAVAILABLE;
 
-- (instancetype _Nonnull)initWithProxy:(VisionCameraProxyHolder* _Nonnull)proxy type:(SharedArrayType)type size:(NSInteger)size;
+/**
+ * Allocates a new SharedArray with the given size.
+ * Use `data` to write to the SharedArray.
+ */
+- (instancetype)initWithProxy:(VisionCameraProxyHolder*)proxy allocateWithSize:(NSInteger)size;
+
+/**
+ * Wraps the given data in a SharedArray without copying.
+ * Use `data` to write to the SharedArray.
+ */
+- (instancetype)initWithProxy:(VisionCameraProxyHolder*)proxy
+                     wrapData:(uint8_t*)data
+                     withSize:(NSInteger)size
+                freeOnDealloc:(BOOL)freeOnDealloc;
 
 #ifdef __cplusplus
-- (instancetype _Nonnull)initWithRuntime:(jsi::Runtime&)runtime typedArray:(std::shared_ptr<vision::TypedArrayBase>)typedArray;
+/**
+ * Wraps the given JSI ArrayBuffer in a SharedArray for native access.
+ * Use `data` to write to the SharedArray.
+ */
+- (instancetype)initWithRuntime:(jsi::Runtime&)runtime wrapArrayBuffer:(std::shared_ptr<jsi::ArrayBuffer>)arrayBuffer;
 
-- (std::shared_ptr<vision::TypedArrayBase>)typedArray;
+- (std::shared_ptr<jsi::ArrayBuffer>)arrayBuffer;
 #endif
 
+/**
+ * The underlying contents of the ArrayBuffer which can be used for reading and writing.
+ */
 @property(nonatomic, readonly, nonnull) uint8_t* data;
-@property(nonatomic, readonly) NSInteger count;
+/**
+ * The size of the ArrayBuffer.
+ */
+@property(nonatomic, readonly) NSInteger size;
 
 @end
+
+NS_ASSUME_NONNULL_END

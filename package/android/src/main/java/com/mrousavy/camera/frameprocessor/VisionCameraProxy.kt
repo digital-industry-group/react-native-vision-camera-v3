@@ -14,17 +14,9 @@ import com.mrousavy.camera.core.ViewNotFoundError
 import java.lang.ref.WeakReference
 
 @Suppress("KotlinJniMissingFunction") // we use fbjni.
-class VisionCameraProxy(context: ReactApplicationContext) {
+class VisionCameraProxy(private val reactContext: ReactApplicationContext) {
   companion object {
     const val TAG = "VisionCameraProxy"
-    init {
-      try {
-        System.loadLibrary("VisionCamera")
-      } catch (e: UnsatisfiedLinkError) {
-        Log.e(TAG, "Failed to load VisionCamera C++ library!", e)
-        throw e
-      }
-    }
   }
 
   @DoNotStrip
@@ -32,6 +24,8 @@ class VisionCameraProxy(context: ReactApplicationContext) {
   private var mHybridData: HybridData
   private var mContext: WeakReference<ReactApplicationContext>
   private var mScheduler: VisionCameraScheduler
+  val context: ReactApplicationContext
+    get() = reactContext
 
   init {
     val jsCallInvokerHolder = context.catalystInstance.jsCallInvokerHolder as CallInvokerHolderImpl
@@ -71,7 +65,7 @@ class VisionCameraProxy(context: ReactApplicationContext) {
 
   @DoNotStrip
   @Keep
-  fun initFrameProcessorPlugin(name: String, options: Map<String, Any>): FrameProcessorPlugin =
+  fun initFrameProcessorPlugin(name: String, options: Map<String, Any>): FrameProcessorPlugin? =
     FrameProcessorPluginRegistry.getPlugin(name, this, options)
 
   // private C++ funcs

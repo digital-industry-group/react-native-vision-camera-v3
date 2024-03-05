@@ -30,7 +30,7 @@ VisionCamera is a powerful, high-performance Camera library for React Native. It
 Install VisionCamera from npm:
 
 ```sh
-yarn add react-native-vision-camera
+npm i react-native-vision-camera
 cd ios && pod install
 ```
 
@@ -41,11 +41,20 @@ cd ios && pod install
 * [Guides](https://react-native-vision-camera.com/docs/guides)
 * [API](https://react-native-vision-camera.com/docs/api)
 * [Example](./package/example/)
-* [Frame Processor Plugins](https://react-native-vision-camera.com/docs/guides/frame-processor-plugin-list)
+* [Frame Processor Plugins](https://react-native-vision-camera.com/docs/guides/frame-processor-plugins)
 
 ### ShadowLens
 
 To see VisionCamera in action, check out [ShadowLens](https://mrousavy.com/projects/shadowlens)!
+
+<div>
+  <a href="https://apps.apple.com/app/shadowlens/id6471849004">
+    <img height="40" src="docs/static/img/appstore.svg" />
+  </a>
+  <a href="https://play.google.com/store/apps/details?id=com.mrousavy.shadowlens">
+    <img height="40" src="docs/static/img/googleplay.svg" />
+  </a>
+</div>
 
 ### Example
 

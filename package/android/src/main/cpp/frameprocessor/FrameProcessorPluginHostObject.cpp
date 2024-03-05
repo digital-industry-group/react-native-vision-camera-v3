@@ -12,6 +12,16 @@ namespace vision {
 
 using namespace facebook;
 
+FrameProcessorPluginHostObject::FrameProcessorPluginHostObject(jni::alias_ref<JFrameProcessorPlugin::javaobject> plugin)
+    : _plugin(make_global(plugin)) {}
+
+FrameProcessorPluginHostObject::~FrameProcessorPluginHostObject() {
+  // Hermes GC might destroy HostObjects on an arbitrary Thread which might not be
+  // connected to the JNI environment. To make sure fbjni can properly destroy
+  // the Java method, we connect to a JNI environment first.
+  jni::ThreadScope::WithClassLoader([&] { _plugin.reset(); });
+}
+
 std::vector<jsi::PropNameID> FrameProcessorPluginHostObject::getPropertyNames(jsi::Runtime& runtime) {
   std::vector<jsi::PropNameID> result;
   result.push_back(jsi::PropNameID::forUtf8(runtime, std::string("call")));

@@ -1,6 +1,6 @@
 package com.mrousavy.camera.types
 
-import android.hardware.camera2.CameraCharacteristics
+import com.mrousavy.camera.core.CameraDeviceDetails
 
 enum class Orientation(override val unionValue: String) : JSUnionValue {
   PORTRAIT("portrait"),
@@ -11,23 +11,22 @@ enum class Orientation(override val unionValue: String) : JSUnionValue {
   fun toDegrees(): Int =
     when (this) {
       PORTRAIT -> 0
-      LANDSCAPE_RIGHT -> 90
+      LANDSCAPE_LEFT -> 90
       PORTRAIT_UPSIDE_DOWN -> 180
-      LANDSCAPE_LEFT -> 270
+      LANDSCAPE_RIGHT -> 270
     }
 
-  fun toSensorRelativeOrientation(cameraCharacteristics: CameraCharacteristics): Orientation {
-    val sensorOrientation = cameraCharacteristics.get(CameraCharacteristics.SENSOR_ORIENTATION)!!
-
+  fun toSensorRelativeOrientation(deviceDetails: CameraDeviceDetails): Orientation {
     // Convert target orientation to rotation degrees (0, 90, 180, 270)
     var rotationDegrees = this.toDegrees()
 
     // Reverse device orientation for front-facing cameras
-    val facingFront = cameraCharacteristics.get(CameraCharacteristics.LENS_FACING) == CameraCharacteristics.LENS_FACING_FRONT
-    if (facingFront) rotationDegrees = -rotationDegrees
+    if (deviceDetails.lensFacing == LensFacing.FRONT) {
+      rotationDegrees = -rotationDegrees
+    }
 
     // Rotate sensor rotation by target rotation
-    val newRotationDegrees = (sensorOrientation + rotationDegrees + 360) % 360
+    val newRotationDegrees = (deviceDetails.sensorOrientation.toDegrees() + rotationDegrees + 360) % 360
 
     return fromRotationDegrees(newRotationDegrees)
   }
@@ -44,9 +43,9 @@ enum class Orientation(override val unionValue: String) : JSUnionValue {
 
     fun fromRotationDegrees(rotationDegrees: Int): Orientation =
       when (rotationDegrees) {
-        in 45..135 -> LANDSCAPE_RIGHT
+        in 45..135 -> LANDSCAPE_LEFT
         in 135..225 -> PORTRAIT_UPSIDE_DOWN
-        in 225..315 -> LANDSCAPE_LEFT
+        in 225..315 -> LANDSCAPE_RIGHT
         else -> PORTRAIT
       }
   }

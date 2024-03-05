@@ -9,6 +9,7 @@ import android.os.Build
 import android.util.Log
 import android.view.Surface
 import androidx.annotation.Keep
+import androidx.annotation.RequiresApi
 import com.facebook.jni.HybridData
 import com.facebook.proguard.annotations.DoNotStrip
 import com.mrousavy.camera.frameprocessor.Frame
@@ -31,26 +32,14 @@ class VideoPipeline(
   val height: Int,
   val format: PixelFormat = PixelFormat.NATIVE,
   private val isMirrored: Boolean = false,
-  enableFrameProcessor: Boolean = false
+  private val enableFrameProcessor: Boolean = false,
+  enableGpuBuffers: Boolean = false,
+  private val callback: CameraSession.Callback
 ) : SurfaceTexture.OnFrameAvailableListener,
   Closeable {
   companion object {
     private const val MAX_IMAGES = 3
     private const val TAG = "VideoPipeline"
-
-    init {
-      try {
-        System.loadLibrary("VisionCamera")
-      } catch (e: UnsatisfiedLinkError) {
-        Log.e(
-          TAG,
-          "Failed to load VisionCamera C++ library! " +
-            "OpenGL GPU VideoPipeline cannot be used.",
-          e
-        )
-        throw e
-      }
-    }
   }
 
   @DoNotStrip
@@ -60,15 +49,12 @@ class VideoPipeline(
   private var transformMatrix = FloatArray(16)
   private var isActive = true
 
-  // Output 1
-  private var frameProcessor: FrameProcessor? = null
-
-  // Output 2
-  private var recordingSession: RecordingSession? = null
-
   // Input
   private val surfaceTexture: SurfaceTexture
   val surface: Surface
+
+  // Output
+  private var recordingSession: RecordingSession? = null
 
   // If Frame Processors are enabled, we go through ImageReader first before we go thru OpenGL
   private var imageReader: ImageReader? = null
@@ -94,17 +80,25 @@ class VideoPipeline(
       val format = getImageReaderFormat()
       Log.i(TAG, "Using ImageReader round-trip (format: #$format)")
 
+      // Create ImageReader
+      if (enableGpuBuffers && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+        val usageFlags = getRecommendedHardwareBufferFlags()
+        Log.i(TAG, "Creating ImageReader with GPU-optimized usage flags: $usageFlags")
+        imageReader = ImageReader.newInstance(width, height, format, MAX_IMAGES, usageFlags)
+      } else {
+        Log.i(TAG, "Creating ImageReader with default usage flags...")
+        imageReader = ImageReader.newInstance(width, height, format, MAX_IMAGES)
+      }
+
+      // Create ImageWriter
       if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-        Log.i(TAG, "Using API 29 for GPU ImageReader...")
-        // GPU_SAMPLED because we redirect to OpenGL
-        val usage = HardwareBuffer.USAGE_GPU_SAMPLED_IMAGE
-        imageReader = ImageReader.newInstance(width, height, format, MAX_IMAGES, usage)
+        Log.i(TAG, "Creating ImageWriter with format #$format...")
         imageWriter = ImageWriter.newInstance(glSurface, MAX_IMAGES, format)
       } else {
-        Log.i(TAG, "Using legacy API for CPU ImageReader...")
-        imageReader = ImageReader.newInstance(width, height, format, MAX_IMAGES)
+        Log.i(TAG, "Creating ImageWriter with default format...")
         imageWriter = ImageWriter.newInstance(glSurface, MAX_IMAGES)
       }
+
       imageReader!!.setOnImageAvailableListener({ reader ->
         Log.i(TAG, "ImageReader::onImageAvailable!")
         val image = reader.acquireNextImage() ?: return@setOnImageAvailableListener
@@ -112,14 +106,20 @@ class VideoPipeline(
         // TODO: Get correct orientation and isMirrored
         val frame = Frame(image, image.timestamp, Orientation.PORTRAIT, isMirrored)
         frame.incrementRefCount()
-        frameProcessor?.call(frame)
 
-        if (hasOutputs) {
-          // If we have outputs (e.g. a RecordingSession), pass the frame along to the OpenGL pipeline
-          imageWriter!!.queueInputImage(image)
+        try {
+          callback.onFrame(frame)
+
+          if (hasOutputs) {
+            // If we have outputs (e.g. a RecordingSession), pass the frame along to the OpenGL pipeline
+            imageWriter?.queueInputImage(image)
+          }
+        } catch (e: Throwable) {
+          Log.e(TAG, "FrameProcessor/ImageReader pipeline threw an error!", e)
+          callback.onError(e)
+        } finally {
+          frame.decrementRefCount()
         }
-
-        frame.decrementRefCount()
       }, CameraQueues.videoQueue.handler)
 
       surface = imageReader!!.surface
@@ -134,10 +134,11 @@ class VideoPipeline(
       isActive = false
       imageWriter?.close()
       imageReader?.close()
-      frameProcessor = null
+      removeRecordingSessionOutputSurface()
       recordingSession = null
+      surfaceTexture.setOnFrameAvailableListener(null, null)
       surfaceTexture.release()
-      mHybridData.resetNative()
+      surface.release()
     }
   }
 
@@ -175,27 +176,13 @@ class VideoPipeline(
     }
 
   /**
-   * Configures the Pipeline to also call the given [FrameProcessor] (or null).
-   */
-  fun setFrameProcessorOutput(frameProcessor: FrameProcessor?) {
-    synchronized(this) {
-      if (frameProcessor != null) {
-        Log.i(TAG, "Setting $width x $height FrameProcessor Output...")
-      } else {
-        Log.i(TAG, "Removing FrameProcessor Output...")
-      }
-      this.frameProcessor = frameProcessor
-    }
-  }
-
-  /**
    * Configures the Pipeline to also write Frames to a Surface from a `MediaRecorder` (or null)
    */
   fun setRecordingSessionOutput(recordingSession: RecordingSession?) {
     synchronized(this) {
       if (recordingSession != null) {
         // Configure OpenGL pipeline to stream Frames into the Recording Session's surface
-        Log.i(TAG, "Setting $width x $height RecordingSession Output...")
+        Log.i(TAG, "Setting ${recordingSession.size} RecordingSession Output...")
         setRecordingSessionOutputSurface(recordingSession.surface)
         this.recordingSession = recordingSession
       } else {
@@ -204,6 +191,56 @@ class VideoPipeline(
         removeRecordingSessionOutputSurface()
         this.recordingSession = null
       }
+    }
+  }
+
+  /**
+   * Get the recommended HardwareBuffer flags for creating ImageReader instances with.
+   *
+   * Tries to use [HardwareBuffer.USAGE_GPU_SAMPLED_IMAGE] if possible, [HardwareBuffer.USAGE_CPU_READ_OFTEN]
+   * or a combination of both flags if CPU access is needed ([enableFrameProcessor]), and [0] otherwise.
+   */
+  @RequiresApi(Build.VERSION_CODES.Q)
+  @Suppress("LiftReturnOrAssignment")
+  private fun getRecommendedHardwareBufferFlags(): Long {
+    val cpuFlag = HardwareBuffer.USAGE_CPU_READ_OFTEN
+    val gpuFlag = HardwareBuffer.USAGE_GPU_SAMPLED_IMAGE
+    val bothFlags = gpuFlag or cpuFlag
+
+    if (format == PixelFormat.NATIVE) {
+      // We don't need CPU access, so we can use GPU optimized buffers
+      if (supportsHardwareBufferFlags(gpuFlag)) {
+        // We support GPU Buffers directly and
+        Log.i(TAG, "GPU HardwareBuffers are supported!")
+        return gpuFlag
+      } else {
+        // no flags are supported - fall back to default
+        return 0
+      }
+    } else {
+      // We are using YUV or RGB formats, so we need CPU access on the Frame
+      if (supportsHardwareBufferFlags(bothFlags)) {
+        // We support both CPU and GPU flags!
+        Log.i(TAG, "GPU + CPU HardwareBuffers are supported!")
+        return bothFlags
+      } else if (supportsHardwareBufferFlags(cpuFlag)) {
+        // We only support a CPU read flag, that's fine
+        Log.i(TAG, "CPU HardwareBuffers are supported!")
+        return cpuFlag
+      } else {
+        // no flags are supported - fall back to default
+        return 0
+      }
+    }
+  }
+
+  @RequiresApi(Build.VERSION_CODES.Q)
+  private fun supportsHardwareBufferFlags(flags: Long): Boolean {
+    val hardwareBufferFormat = format.toHardwareBufferFormat()
+    try {
+      return HardwareBuffer.isSupported(width, height, hardwareBufferFormat, 1, flags)
+    } catch (_: Throwable) {
+      return false
     }
   }
 

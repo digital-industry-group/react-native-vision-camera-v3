@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include "JSITypedArray.h"
 #include "JVisionCameraProxy.h"
+#include "MutableJByteBuffer.h"
 #include <fbjni/ByteBuffer.h>
 #include <fbjni/fbjni.h>
 #include <jni.h>
@@ -16,32 +16,36 @@ using namespace facebook;
 
 class JSharedArray : public jni::HybridClass<JSharedArray> {
 public:
-  static auto constexpr kJavaDescriptor = "Lcom/mrousavy/camera/frameprocessor/TypedArray;";
+  static auto constexpr kJavaDescriptor = "Lcom/mrousavy/camera/frameprocessor/SharedArray;";
   static void registerNatives();
 
 public:
-  static jni::local_ref<JSharedArray::javaobject> create(jsi::Runtime& runtime, TypedArrayBase array);
+  static jni::local_ref<JSharedArray::javaobject> create(jsi::Runtime& runtime, jsi::ArrayBuffer arrayBuffer);
 
 public:
-  jni::local_ref<jni::JByteBuffer> getByteBuffer();
-  std::shared_ptr<TypedArrayBase> getTypedArray();
+  jint getSize();
+  jni::global_ref<jni::JByteBuffer> getByteBuffer();
+  std::shared_ptr<jsi::ArrayBuffer> getArrayBuffer();
 
 private:
-  jni::global_ref<jni::JByteBuffer> wrapInByteBuffer(jsi::Runtime& runtime, std::shared_ptr<TypedArrayBase> typedArray);
-
-private:
-  static auto constexpr TAG = "TypedArray";
+  static auto constexpr TAG = "SharedArray";
   friend HybridBase;
   jni::global_ref<javaobject> _javaPart;
   jni::global_ref<jni::JByteBuffer> _byteBuffer;
-  std::shared_ptr<TypedArrayBase> _array;
+  std::shared_ptr<jsi::ArrayBuffer> _arrayBuffer;
+  int _size;
 
 private:
-  explicit JSharedArray(jsi::Runtime& runtime, std::shared_ptr<TypedArrayBase> array);
+  explicit JSharedArray(jsi::Runtime& runtime, std::shared_ptr<jsi::ArrayBuffer> arrayBuffer);
   explicit JSharedArray(const jni::alias_ref<jhybridobject>& javaThis, const jni::alias_ref<JVisionCameraProxy::javaobject>& proxy,
-                        int dataType, int size);
-  static jni::local_ref<jhybriddata> initHybrid(jni::alias_ref<jhybridobject> javaThis,
-                                                jni::alias_ref<JVisionCameraProxy::javaobject> proxy, jint dataType, jint size);
+                        int size);
+  explicit JSharedArray(const jni::alias_ref<jhybridobject>& javaThis, const jni::alias_ref<JVisionCameraProxy::javaobject>& proxy,
+                        jni::alias_ref<JByteBuffer> byteBuffer);
+  static jni::local_ref<jhybriddata> initHybridAllocate(jni::alias_ref<jhybridobject> javaThis,
+                                                        jni::alias_ref<JVisionCameraProxy::javaobject> proxy, jint size);
+  static jni::local_ref<jhybriddata> initHybridWrap(jni::alias_ref<jhybridobject> javaThis,
+                                                    jni::alias_ref<JVisionCameraProxy::javaobject> proxy,
+                                                    jni::alias_ref<JByteBuffer> byteBuffer);
 };
 
 } // namespace vision
