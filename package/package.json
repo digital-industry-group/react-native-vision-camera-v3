@@ -74,13 +74,8 @@
     "processing",
     "realtime"
   ],
-<<<<<<< HEAD
   "repository": "https://github.com/digital-industry-group/react-native-vision-camera-v3.git",
   "author": "Marc Rousavy <marcrousavy@hotmail.com> (https://github.com/mrousavy)",
-=======
-  "repository": "https://github.com/mrousavy/react-native-vision-camera",
-  "author": "Marc Rousavy <me@mrousavy.com> (https://github.com/mrousavy)",
->>>>>>> 8e1f03907bfa7ae49ca9dc2e74ed149fc8f67388
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/digital-industry-group/react-native-vision-camera-v3/issues"
