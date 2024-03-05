@@ -14,7 +14,7 @@ class CodeScannerPipeline(
   val size: Size,
   val format: Int,
   val configuration: CameraConfiguration.CodeScanner,
-  val callback: CameraSession.CameraSessionCallback
+  val callback: CameraSession.Callback
 ) : Closeable {
   companion object {
     // We want to have a buffer of 2 images, but we always only acquire one.
@@ -39,7 +39,7 @@ class CodeScannerPipeline(
     var isBusy = false
     imageReader = ImageReader.newInstance(size.width, size.height, format, MAX_IMAGES)
     imageReader.setOnImageAvailableListener({ reader ->
-      val image = reader.acquireNextImage() ?: return@setOnImageAvailableListener
+      val image = reader.acquireLatestImage() ?: return@setOnImageAvailableListener
 
       if (isBusy) {
         // We're currently executing on a previous Frame, so we skip this one.

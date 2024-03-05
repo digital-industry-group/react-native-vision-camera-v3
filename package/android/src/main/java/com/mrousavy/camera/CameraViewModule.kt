@@ -10,6 +10,7 @@ import com.facebook.react.modules.core.PermissionAwareActivity
 import com.facebook.react.modules.core.PermissionListener
 import com.facebook.react.uimanager.UIManagerHelper
 import com.mrousavy.camera.core.CameraError
+import com.mrousavy.camera.core.CameraQueues
 import com.mrousavy.camera.core.ViewNotFoundError
 import com.mrousavy.camera.frameprocessor.VisionCameraInstaller
 import com.mrousavy.camera.frameprocessor.VisionCameraProxy
@@ -26,9 +27,20 @@ class CameraViewModule(reactContext: ReactApplicationContext) : ReactContextBase
   companion object {
     const val TAG = "CameraView"
     var sharedRequestCode = 10
+
+    init {
+      try {
+        // Load the native part of VisionCamera.
+        // Includes the OpenGL VideoPipeline, as well as Frame Processor JSI bindings
+        System.loadLibrary("VisionCamera")
+      } catch (e: UnsatisfiedLinkError) {
+        Log.e(VisionCameraProxy.TAG, "Failed to load VisionCamera C++ library!", e)
+        throw e
+      }
+    }
   }
 
-  private val coroutineScope = CoroutineScope(Dispatchers.Default) // TODO: or Dispatchers.Main?
+  private val coroutineScope = CoroutineScope(CameraQueues.cameraQueue.coroutineDispatcher)
 
   override fun invalidate() {
     super.invalidate()

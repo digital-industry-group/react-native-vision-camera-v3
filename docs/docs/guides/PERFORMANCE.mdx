@@ -62,13 +62,20 @@ Note: By default (when not passing the options object), a simpler device is alre
 
 ### No Video HDR
 
-Video HDR uses 10-bit formats and/or additional processing steps that come with additional computation overhead. Disable Video HDR (don't pass `videoHdr` to the `<Camera>`) for higher efficiency.
+Video HDR uses 10-bit formats and/or additional processing steps that come with additional computation overhead. Disable [`videoHdr`](/docs/api/interfaces/CameraProps#videohdr) for higher efficiency.
 
 ### Buffer Compression
 
 Enable Buffer Compression ([`enableBufferCompression`](/docs/api/interfaces/CameraProps#enablebuffercompression)) to use lossy-compressed buffers for the Camera's video pipeline. These buffers can use less memory and are more efficient.
 
 Note: When not using a `frameProcessor`, buffer compression is automatically enabled.
+
+### GPU buffers
+
+Enable GPU Buffer flags ([`enableGpuBuffers`](/docs/api/interfaces/CameraProps#enablegpubuffers)) to optimize the Video Pipeline for zero-copy buffer forwarding.
+If this is enabled, the Video Pipeline can avoid an additional CPU -> GPU copy, resulting in better performance and more efficiency.
+
+Note: This only takes effect when using a `frameProcessor`.
 
 ### Video Stabilization
 
@@ -83,7 +90,11 @@ By default, the `native` [`PixelFormat`](/docs/api#pixelformat) is used, which i
 
 ### Disable unneeded pipelines
 
-Only enable [`photo`](/docs/api/interfaces/CameraProps#photo) and [`video`](/docs/api/interfaces/CameraProps#video) if needed.
+Only enable [`photo`](/docs/api/interfaces/CameraProps#photo), [`video`](/docs/api/interfaces/CameraProps#video), [`codeScanner`](/docs/api/interfaces/CameraProps#codescanner) or [`frameProcessor`](/docs/api/interfaces/CameraProps#frameprocessor) if needed.
+
+### Using `isActive`
+
+The [`isActive`](/docs/api/interfaces/CameraProps#isactive) prop controls whether the Camera should actively stream frames. Instead of fully unmounting the `<Camera>` component and remounting it again, keep it mounted and just switch `isActive` on or off. This makes the Camera resume much faster as it internally keeps the session warmed up.
 
 ### Fast Photos
 

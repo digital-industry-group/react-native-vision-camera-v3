@@ -9,6 +9,7 @@ import com.facebook.proguard.annotations.DoNotStrip;
 
 /**
  * Represents a JS Frame Processor
+ * @noinspection JavaJniMissingFunction
  */
 public final class FrameProcessor {
     /**
@@ -20,6 +21,8 @@ public final class FrameProcessor {
     @Keep
     private final HybridData mHybridData;
 
+    @DoNotStrip
+    @Keep
     public FrameProcessor(HybridData hybridData) {
         mHybridData = hybridData;
     }

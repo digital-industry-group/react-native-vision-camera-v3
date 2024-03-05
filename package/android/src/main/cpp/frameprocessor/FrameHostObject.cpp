@@ -7,13 +7,15 @@
 #include <fbjni/fbjni.h>
 #include <jni.h>
 
-#include "JSITypedArray.h"
+#include "MutableRawBuffer.h"
 
 #include <string>
 #include <vector>
 
 #include <android/hardware_buffer.h>
 #include <android/hardware_buffer_jni.h>
+
+#include "FinalAction.h"
 
 namespace vision {
 
@@ -22,10 +24,9 @@ using namespace facebook;
 FrameHostObject::FrameHostObject(const jni::alias_ref<JFrame::javaobject>& frame) : frame(make_global(frame)) {}
 
 FrameHostObject::~FrameHostObject() {
-  // Hermes' Garbage Collector (Hades GC) calls destructors on a separate Thread
-  // which might not be attached to JNI. Ensure that we use the JNI class loader when
-  // deallocating the `frame` HybridClass, because otherwise JNI cannot call the Java
-  // destroy() function.
+  // Hermes GC might destroy HostObjects on an arbitrary Thread which might not be
+  // connected to the JNI environment. To make sure fbjni can properly destroy
+  // the Java method, we connect to a JNI environment first.
   jni::ThreadScope::WithClassLoader([&] { frame.reset(); });
 }
 
@@ -93,38 +94,48 @@ jsi::Value FrameHostObject::get(jsi::Runtime& runtime, const jsi::PropNameID& pr
     jsi::HostFunctionType toArrayBuffer = JSI_FUNC {
 #if __ANDROID_API__ >= 26
       AHardwareBuffer* hardwareBuffer = this->frame->getHardwareBuffer();
+      AHardwareBuffer_acquire(hardwareBuffer);
+      finally([&]() { AHardwareBuffer_release(hardwareBuffer); });
 
       AHardwareBuffer_Desc bufferDescription;
       AHardwareBuffer_describe(hardwareBuffer, &bufferDescription);
-      __android_log_print(ANDROID_LOG_INFO, "Frame", "Buffer %i x %i @ %i", bufferDescription.width, bufferDescription.height,
-                          bufferDescription.stride);
+      __android_log_print(ANDROID_LOG_INFO, "Frame", "Converting %i x %i @ %i HardwareBuffer...", bufferDescription.width,
+                          bufferDescription.height, bufferDescription.stride);
       size_t size = bufferDescription.height * bufferDescription.stride;
 
       static constexpr auto ARRAYBUFFER_CACHE_PROP_NAME = "__frameArrayBufferCache";
       if (!runtime.global().hasProperty(runtime, ARRAYBUFFER_CACHE_PROP_NAME)) {
-        vision::TypedArray<vision::TypedArrayKind::Uint8ClampedArray> arrayBuffer(runtime, size);
+        auto mutableBuffer = std::make_shared<vision::MutableRawBuffer>(size);
+        jsi::ArrayBuffer arrayBuffer(runtime, mutableBuffer);
         runtime.global().setProperty(runtime, ARRAYBUFFER_CACHE_PROP_NAME, arrayBuffer);
       }
 
       // Get from global JS cache
       auto arrayBufferCache = runtime.global().getPropertyAsObject(runtime, ARRAYBUFFER_CACHE_PROP_NAME);
-      auto arrayBuffer = vision::getTypedArray(runtime, arrayBufferCache).get<vision::TypedArrayKind::Uint8ClampedArray>(runtime);
+      auto arrayBuffer = arrayBufferCache.getArrayBuffer(runtime);
+
       if (arrayBuffer.size(runtime) != size) {
-        arrayBuffer = vision::TypedArray<vision::TypedArrayKind::Uint8ClampedArray>(runtime, size);
+        auto mutableBuffer = std::make_shared<vision::MutableRawBuffer>(size);
+        arrayBuffer = jsi::ArrayBuffer(runtime, mutableBuffer);
         runtime.global().setProperty(runtime, ARRAYBUFFER_CACHE_PROP_NAME, arrayBuffer);
       }
 
       // Get CPU access to the HardwareBuffer (&buffer is a virtual temporary address)
       void* buffer;
-      AHardwareBuffer_lock(hardwareBuffer, AHARDWAREBUFFER_USAGE_CPU_READ_MASK, -1, nullptr, &buffer);
+      int result = AHardwareBuffer_lock(hardwareBuffer, AHARDWAREBUFFER_USAGE_CPU_READ_MASK, -1, nullptr, &buffer);
+      if (result != 0) {
+        throw jsi::JSError(runtime, "Failed to lock HardwareBuffer for reading!");
+      }
+      finally([&]() {
+        int result = AHardwareBuffer_unlock(hardwareBuffer, nullptr);
+        if (result != 0) {
+          throw jsi::JSError(runtime, "Failed to lock HardwareBuffer for reading!");
+        }
+      });
 
       // directly write to C++ JSI ArrayBuffer
       auto destinationBuffer = arrayBuffer.data(runtime);
       memcpy(destinationBuffer, buffer, sizeof(uint8_t) * size);
-
-      // Release HardwareBuffer again
-      AHardwareBuffer_unlock(hardwareBuffer, nullptr);
-      AHardwareBuffer_release(hardwareBuffer);
 
       return arrayBuffer;
 #else
@@ -169,5 +180,7 @@ jsi::Value FrameHostObject::get(jsi::Runtime& runtime, const jsi::PropNameID& pr
   // fallback to base implementation
   return HostObject::get(runtime, propName);
 }
+
+#undef JSI_FUNC
 
 } // namespace vision

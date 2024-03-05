@@ -74,7 +74,9 @@ export interface CameraProps extends ViewProps {
    * - `yuv`: The YUV (Y'CbCr 4:2:0 or NV21, 8-bit) format, either video- or full-range, depending on hardware capabilities. This is the second most efficient format.
    * - `rgb`: The RGB (RGB, RGBA or ABGRA, 8-bit) format. This is least efficient and requires explicit conversion.
    *
-   * @default `native`
+   * @default
+   * - Without a Frame Processor: `native`
+   * - With a Frame Processor: `yuv`
    */
   pixelFormat?: 'native' | 'yuv' | 'rgb'
   //#endregion
@@ -191,10 +193,29 @@ export interface CameraProps extends ViewProps {
    *
    * @platform iOS
    * @default
-   * - true // if video={true} and frameProcessor={undefined}
+   * - true // if frameProcessor={undefined}
    * - false // otherwise
    */
   enableBufferCompression?: boolean
+  /**
+   * Enables or disables GPU-sampled buffers for the video stream. This only takes effect when using a {@linkcode frameProcessor}.
+   *
+   * When recording a Video ({@linkcode video}) while a Frame Processor is running ({@linkcode frameProcessor}),
+   * the {@linkcode Frame | Frames} will need to be forwarded to the Media Encoder.
+   *
+   * - When `enableGpuBuffers` is `false`, the Video Pipeline will use CPU buffers causing an additional copy
+   * from the Frame Processor to the Media Encoder, which potentially results in increased latency.
+   * - When `enableGpuBuffers` is `true`, the Video Pipeline will use shared GPU buffers which greatly increases
+   * it's efficiency as an additional buffer copy is avoided.
+   * (See [`USAGE_GPU_SAMPLED_IMAGE`](https://developer.android.com/reference/android/hardware/HardwareBuffer#USAGE_GPU_SAMPLED_IMAGE))
+   *
+   * In general, it is recommended to set this to `true` if possible, as this can increase performance and efficiency of the Video Pipeline.
+   *
+   * @experimental This is an experimental feature flag, use at your own risk. Some devices (especially Samsungs) may crash when trying to use GPU buffers.
+   * @platform Android (API 29+)
+   * @default false
+   */
+  enableGpuBuffers?: boolean
   /**
    * Enables or disables low-light boost on this camera device.
    *
@@ -235,6 +256,7 @@ export interface CameraProps extends ViewProps {
    * * Dual Device fusion for greater detail ([`isDualCameraDualPhotoDeliveryEnabled`](https://developer.apple.com/documentation/avfoundation/avcapturephotosettings/2873917-isdualcameradualphotodeliveryena))
    * * Sets the maximum quality prioritization to `.quality` ([`maxPhotoQualityPrioritization`](https://developer.apple.com/documentation/avfoundation/avcapturephotooutput/3182995-maxphotoqualityprioritization))
    *
+   * @platform iOS
    * @default false
    */
   enableHighQualityPhotos?: boolean

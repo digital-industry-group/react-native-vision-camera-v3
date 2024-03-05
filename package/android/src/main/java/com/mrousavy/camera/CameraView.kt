@@ -4,9 +4,9 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.hardware.camera2.CameraManager
 import android.util.Log
+import android.view.Gravity
 import android.view.ScaleGestureDetector
 import android.widget.FrameLayout
-import com.facebook.react.bridge.ReadableMap
 import com.google.mlkit.vision.barcode.common.Barcode
 import com.mrousavy.camera.core.CameraConfiguration
 import com.mrousavy.camera.core.CameraQueues
@@ -14,6 +14,7 @@ import com.mrousavy.camera.core.CameraSession
 import com.mrousavy.camera.core.CodeScannerFrame
 import com.mrousavy.camera.core.PreviewView
 import com.mrousavy.camera.extensions.installHierarchyFitter
+import com.mrousavy.camera.frameprocessor.Frame
 import com.mrousavy.camera.frameprocessor.FrameProcessor
 import com.mrousavy.camera.types.CameraDeviceFormat
 import com.mrousavy.camera.types.CodeScannerOptions
@@ -22,7 +23,6 @@ import com.mrousavy.camera.types.PixelFormat
 import com.mrousavy.camera.types.ResizeMode
 import com.mrousavy.camera.types.Torch
 import com.mrousavy.camera.types.VideoStabilizationMode
-import kotlin.coroutines.CoroutineContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
@@ -38,8 +38,7 @@ import kotlinx.coroutines.launch
 @SuppressLint("ClickableViewAccessibility", "ViewConstructor", "MissingPermission")
 class CameraView(context: Context) :
   FrameLayout(context),
-  CoroutineScope,
-  CameraSession.CameraSessionCallback {
+  CameraSession.Callback {
   companion object {
     const val TAG = "CameraView"
   }
@@ -48,23 +47,23 @@ class CameraView(context: Context) :
   // props that require reconfiguring
   var cameraId: String? = null
   var enableDepthData = false
-  var enableHighQualityPhotos: Boolean? = null
   var enablePortraitEffectsMatteDelivery = false
 
   // use-cases
-  var photo: Boolean? = null
-  var video: Boolean? = null
-  var audio: Boolean? = null
+  var photo = false
+  var video = false
+  var audio = false
   var enableFrameProcessor = false
   var pixelFormat: PixelFormat = PixelFormat.NATIVE
 
   // props that require format reconfiguring
-  var format: ReadableMap? = null
+  var format: CameraDeviceFormat? = null
   var fps: Int? = null
   var videoStabilizationMode: VideoStabilizationMode? = null
   var videoHdr = false
   var photoHdr = false
-  var lowLightBoost: Boolean? = null // nullable bool
+  var lowLightBoost = false
+  var enableGpuBuffers = false
 
   // other props
   var isActive = false
@@ -72,7 +71,7 @@ class CameraView(context: Context) :
   var zoom: Float = 1f // in "factor"
   var exposure: Double = 1.0
   var orientation: Orientation = Orientation.PORTRAIT
-  var enableZoomGesture: Boolean = false
+  var enableZoomGesture = false
     set(value) {
       field = value
       updateZoomGesture()
@@ -82,47 +81,54 @@ class CameraView(context: Context) :
       previewView.resizeMode = value
       field = value
     }
+  var enableFpsGraph = false
+    set(value) {
+      field = value
+      updateFpsGraph()
+    }
 
   // code scanner
   var codeScannerOptions: CodeScannerOptions? = null
 
   // private properties
   private var isMounted = false
+  private val coroutineScope = CoroutineScope(CameraQueues.cameraQueue.coroutineDispatcher)
   internal val cameraManager = context.getSystemService(Context.CAMERA_SERVICE) as CameraManager
 
   // session
   internal val cameraSession: CameraSession
   private val previewView: PreviewView
   private var currentConfigureCall: Long = System.currentTimeMillis()
-
   internal var frameProcessor: FrameProcessor? = null
-    set(value) {
-      field = value
-      cameraSession.frameProcessor = frameProcessor
-    }
 
-  override val coroutineContext: CoroutineContext = CameraQueues.cameraQueue.coroutineDispatcher
+  // other
+  private var fpsGraph: FpsGraphView? = null
 
   init {
     this.installHierarchyFitter()
     clipToOutline = true
     cameraSession = CameraSession(context, cameraManager, this)
     previewView = cameraSession.createPreviewView(context)
+    previewView.layoutParams = LayoutParams(
+      LayoutParams.MATCH_PARENT,
+      LayoutParams.MATCH_PARENT,
+      Gravity.CENTER
+    )
     addView(previewView)
   }
 
   override fun onAttachedToWindow() {
+    super.onAttachedToWindow()
     if (!isMounted) {
       isMounted = true
       invokeOnViewReady()
     }
     update()
-    super.onAttachedToWindow()
   }
 
   override fun onDetachedFromWindow() {
-    update()
     super.onDetachedFromWindow()
+    update()
   }
 
   fun destroy() {
@@ -134,7 +140,7 @@ class CameraView(context: Context) :
     val now = System.currentTimeMillis()
     currentConfigureCall = now
 
-    launch {
+    coroutineScope.launch {
       cameraSession.configure { config ->
         if (currentConfigureCall != now) {
           // configure waits for a lock, and if a new call to update() happens in the meantime we can drop this one.
@@ -147,19 +153,20 @@ class CameraView(context: Context) :
         config.cameraId = cameraId
 
         // Photo
-        if (photo == true) {
+        if (photo) {
           config.photo = CameraConfiguration.Output.Enabled.create(CameraConfiguration.Photo(photoHdr))
         } else {
           config.photo = CameraConfiguration.Output.Disabled.create()
         }
 
         // Video/Frame Processor
-        if (video == true || enableFrameProcessor) {
+        if (video || enableFrameProcessor) {
           config.video = CameraConfiguration.Output.Enabled.create(
             CameraConfiguration.Video(
               videoHdr,
               pixelFormat,
-              enableFrameProcessor
+              enableFrameProcessor,
+              enableGpuBuffers
             )
           )
         } else {
@@ -167,7 +174,7 @@ class CameraView(context: Context) :
         }
 
         // Audio
-        if (audio == true) {
+        if (audio) {
           config.audio = CameraConfiguration.Output.Enabled.create(CameraConfiguration.Audio(Unit))
         } else {
           config.audio = CameraConfiguration.Output.Disabled.create()
@@ -187,12 +194,7 @@ class CameraView(context: Context) :
         config.orientation = orientation
 
         // Format
-        val format = format
-        if (format != null) {
-          config.format = CameraDeviceFormat.fromJSValue(format)
-        } else {
-          config.format = null
-        }
+        config.format = format
 
         // Side-Props
         config.fps = fps
@@ -228,6 +230,24 @@ class CameraView(context: Context) :
     } else {
       setOnTouchListener(null)
     }
+  }
+
+  private fun updateFpsGraph() {
+    if (enableFpsGraph) {
+      if (fpsGraph != null) return
+      fpsGraph = FpsGraphView(context)
+      addView(fpsGraph)
+    } else {
+      if (fpsGraph == null) return
+      removeView(fpsGraph)
+      fpsGraph = null
+    }
+  }
+
+  override fun onFrame(frame: Frame) {
+    frameProcessor?.call(frame)
+
+    fpsGraph?.onTick()
   }
 
   override fun onError(error: Throwable) {

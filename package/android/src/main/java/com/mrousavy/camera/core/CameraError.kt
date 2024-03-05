@@ -62,6 +62,8 @@ class FlashUnavailableError :
     "flash-unavailable",
     "The Camera Device does not have a flash unit! Make sure you select a device where `device.hasFlash`/`device.hasTorch` is true."
   )
+class FocusNotSupportedError :
+  CameraError("device", "focus-not-supported", "The currently selected camera device does not support focusing!")
 
 class CameraNotReadyError :
   CameraError("session", "camera-not-ready", "The Camera is not ready yet! Wait for the onInitialized() callback!")
@@ -71,6 +73,8 @@ class CameraSessionCannotBeConfiguredError(cameraId: String) :
   CameraError("session", "cannot-create-session", "Failed to create a Camera Session for Camera #$cameraId!")
 class CameraDisconnectedError(cameraId: String, error: CameraDeviceError) :
   CameraError("session", "camera-has-been-disconnected", "The given Camera device (id: $cameraId) has been disconnected! Error: $error")
+class NoOutputsError :
+  CameraError("session", "no-outputs", "Cannot create a CameraCaptureSession without any outputs! (PREVIEW, PHOTO, VIDEO, ...)")
 
 class PropRequiresFormatToBeNonNullError(propName: String) :
   CameraError("format", "format-required", "The prop \"$propName\" requires a format to be set, but format was null!")
@@ -100,17 +104,30 @@ class PhotoNotEnabledError :
   CameraError("capture", "photo-not-enabled", "Photo capture is disabled! Pass `photo={true}` to enable photo capture.")
 class CaptureAbortedError(wasImageCaptured: Boolean) :
   CameraError("capture", "aborted", "The image capture was aborted! Was Image captured: $wasImageCaptured")
+class FocusCanceledError : CameraError("capture", "focus-canceled", "The focus operation was canceled.")
+class CaptureTimedOutError : CameraError("capture", "timed-out", "The image capture was aborted because it timed out.")
 class UnknownCaptureError(wasImageCaptured: Boolean) :
   CameraError("capture", "unknown", "An unknown error occurred while trying to capture an Image! Was Image captured: $wasImageCaptured")
 class RecorderError(name: String, extra: Int) :
   CameraError("capture", "recorder-error", "An error occured while recording a video! $name $extra")
 class NoRecordingInProgressError :
   CameraError("capture", "no-recording-in-progress", "There was no active video recording in progress! Did you call stopRecording() twice?")
+class InsufficientStorageError : CameraError("capture", "insufficient-storage", "There is not enough storage space available.")
 class RecordingInProgressError :
   CameraError(
     "capture",
     "recording-in-progress",
     "There is already an active video recording in progress! Did you call startRecording() twice?"
+  )
+class FrameInvalidError :
+  CameraError(
+    "capture",
+    "frame-invalid",
+    "Trying to access an already closed Frame! " +
+      "Are you trying to access the Image data outside of a Frame Processor's lifetime?\n" +
+      "- If you want to use `console.log(frame)`, use `console.log(frame.toString())` instead.\n" +
+      "- If you want to do async processing, use `runAsync(...)` instead.\n" +
+      "- If you want to use runOnJS, increment it's ref-count: `frame.incrementRefCount()`"
   )
 
 class CodeTypeNotSupportedError(codeType: String) :
@@ -118,6 +135,13 @@ class CodeTypeNotSupportedError(codeType: String) :
     "code-scanner",
     "code-type-not-supported",
     "The codeType \"$codeType\" is not supported by the Code Scanner!"
+  )
+class CodeScannerTooManyOutputsError :
+  CameraError(
+    "code-scanner",
+    "not-compatible-with-outputs",
+    "CodeScanner can only be enabled when both video and frameProcessor are disabled! " +
+      "Use a Frame Processor Plugin for code scanning instead."
   )
 
 class ViewNotFoundError(viewId: Int) :

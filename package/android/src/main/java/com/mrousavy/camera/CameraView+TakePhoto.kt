@@ -12,11 +12,13 @@ import com.facebook.react.bridge.Arguments
 import com.facebook.react.bridge.ReadableMap
 import com.facebook.react.bridge.WritableMap
 import com.mrousavy.camera.core.CameraSession
+import com.mrousavy.camera.core.InsufficientStorageError
 import com.mrousavy.camera.types.Flash
 import com.mrousavy.camera.types.QualityPrioritization
 import com.mrousavy.camera.utils.*
 import java.io.File
 import java.io.FileOutputStream
+import java.io.IOException
 import kotlinx.coroutines.*
 
 private const val TAG = "CameraView.takePhoto"
@@ -28,9 +30,12 @@ suspend fun CameraView.takePhoto(optionsMap: ReadableMap): WritableMap {
 
   val qualityPrioritization = options["qualityPrioritization"] as? String ?: "balanced"
   val flash = options["flash"] as? String ?: "off"
-  val enableAutoRedEyeReduction = options["enableAutoRedEyeReduction"] == true
   val enableAutoStabilization = options["enableAutoStabilization"] == true
   val enableShutterSound = options["enableShutterSound"] as? Boolean ?: true
+  val enablePrecapture = options["enablePrecapture"] as? Boolean ?: false
+
+  // TODO: Implement Red Eye Reduction
+  options["enableAutoRedEyeReduction"]
 
   val flashMode = Flash.fromUnionValue(flash)
   val qualityPrioritizationMode = QualityPrioritization.fromUnionValue(qualityPrioritization)
@@ -39,8 +44,8 @@ suspend fun CameraView.takePhoto(optionsMap: ReadableMap): WritableMap {
     qualityPrioritizationMode,
     flashMode,
     enableShutterSound,
-    enableAutoRedEyeReduction,
     enableAutoStabilization,
+    enablePrecapture,
     orientation
   )
 
@@ -49,7 +54,15 @@ suspend fun CameraView.takePhoto(optionsMap: ReadableMap): WritableMap {
 
     val cameraCharacteristics = cameraManager.getCameraCharacteristics(cameraId!!)
 
-    val path = savePhotoToFile(context, cameraCharacteristics, photo)
+    val path = try {
+      savePhotoToFile(context, cameraCharacteristics, photo)
+    } catch (e: IOException) {
+      if (e.message?.contains("no space left", true) == true) {
+        throw InsufficientStorageError()
+      } else {
+        throw e
+      }
+    }
 
     Log.i(TAG, "Successfully saved photo to file! $path")
 
@@ -93,7 +106,7 @@ private suspend fun savePhotoToFile(
     when (photo.format) {
       // When the format is JPEG or DEPTH JPEG we can simply save the bytes as-is
       ImageFormat.JPEG, ImageFormat.DEPTH_JPEG -> {
-        val file = createFile(context, ".jpg")
+        val file = FileUtils.createTempFile(context, ".jpg")
         writePhotoToFile(photo, file)
         return@withContext file.absolutePath
       }
@@ -101,7 +114,7 @@ private suspend fun savePhotoToFile(
       // When the format is RAW we use the DngCreator utility library
       ImageFormat.RAW_SENSOR -> {
         val dngCreator = DngCreator(cameraCharacteristics, photo.metadata)
-        val file = createFile(context, ".dng")
+        val file = FileUtils.createTempFile(context, ".dng")
         FileOutputStream(file).use { stream ->
           // TODO: Make sure orientation is loaded properly here?
           dngCreator.writeImage(stream, photo.image)
@@ -113,9 +126,4 @@ private suspend fun savePhotoToFile(
         throw Error("Failed to save Photo to file, image format is not supported! ${photo.format}")
       }
     }
-  }
-
-private fun createFile(context: Context, extension: String): File =
-  File.createTempFile("mrousavy", extension, context.cacheDir).apply {
-    deleteOnExit()
   }
