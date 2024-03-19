@@ -1,6 +1,6 @@
 {
-  "name": "react-native-vision-camera",
-  "version": "3.9.1",
+  "name": "@digital-industry-group/react-native-vision-camera-v3",
+  "version": "3.9.2",
   "description": "A powerful, high-performance React Native Camera library.",
   "main": "lib/commonjs/index",
   "module": "lib/module/index",
@@ -74,15 +74,15 @@
     "processing",
     "realtime"
   ],
-  "repository": "https://github.com/mrousavy/react-native-vision-camera",
-  "author": "Marc Rousavy <me@mrousavy.com> (https://github.com/mrousavy)",
+  "repository": "https://github.com/digital-industry-group/react-native-vision-camera-v3.git",
+  "author": "Marc Rousavy <marcrousavy@hotmail.com> (https://github.com/mrousavy)",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/mrousavy/react-native-vision-camera/issues"
+    "url": "https://github.com/digital-industry-group/react-native-vision-camera-v3/issues"
   },
   "homepage": "https://react-native-vision-camera.com/",
   "publishConfig": {
-    "registry": "https://registry.npmjs.org/"
+    "registry": "https://npm.pkg.github.com"
   },
   "devDependencies": {
     "@expo/config-plugins": "^7.2.5",

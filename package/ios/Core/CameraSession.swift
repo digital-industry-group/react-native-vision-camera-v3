@@ -170,6 +170,9 @@ class CameraSession: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate, AVC
           if difference.exposureChanged {
             self.configureExposure(configuration: config, device: device)
           }
+          if difference.manualFocusChanged {
+            self.configureManualFocus(configuration: config, device: device)
+          }
         }
 
         if difference.isSessionConfigurationDirty {

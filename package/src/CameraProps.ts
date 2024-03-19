@@ -123,6 +123,16 @@ export interface CameraProps extends ViewProps {
    * The value between min- and max supported exposure is considered the default, neutral value.
    */
   exposure?: number
+  /**
+   * Specifies the Manual Focus value of the current camera. A lower value shifts the lens focus closer and a higher value shifts it further away.
+   * The values range from 0.0 to 1.0, but the value does not correspond to an exact physical distance, nor does it represent a consistent focus distance from device to device.
+   * https://developer.apple.com/documentation/avfoundation/avcapturedevice/1624643-lensposition
+   */
+  manualFocus?: number
+  /**
+   * Specifies whether manual focus should be enabled (focus locked on the manualFocus value) or not.
+   */
+  enableManualFocus?: boolean
   //#endregion
 
   //#region Format/Preset selection

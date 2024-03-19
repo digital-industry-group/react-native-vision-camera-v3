@@ -291,6 +291,7 @@ extension CameraSession {
    Configures exposure (`exposure`) as a bias that adjusts exposureTime and ISO.
    */
   func configureExposure(configuration: CameraConfiguration, device: AVCaptureDevice) {
+  ReactLogger.log(level: .info, message: "Enter Exposure")
     guard let exposure = configuration.exposure else {
       return
     }
@@ -298,6 +299,35 @@ extension CameraSession {
     let clamped = min(max(exposure, device.minExposureTargetBias), device.maxExposureTargetBias)
     device.setExposureTargetBias(clamped)
   }
+
+  // pragma MARK: ManualFocus
+
+  /**
+  Configures manual focus
+   */
+   func configureManualFocus(configuration: CameraConfiguration, device: AVCaptureDevice) {
+   ReactLogger.log(level: .info, message: "Enter Manual Focusing")
+   ReactLogger.log(level: .info, message: "Focus Value: \(configuration.manualFocus)")
+    guard let manualFocus = configuration.manualFocus else {
+        return
+    }
+    if (!device.isLockingFocusWithCustomLensPositionSupported) {
+        ReactLogger.log(level: .info, message: "Locking Focus With Custom Lens Position Is Not Supported")
+        return
+    }
+    if (configuration.enableManualFocus != true) {
+        ReactLogger.log(level: .info, message: "Manual Focus is not enabled")
+        // Reset Focus to continuous/auto
+        if device.isFocusPointOfInterestSupported {
+          var point = CGPoint(x:0.5, y:0.5)
+          device.focusPointOfInterest = point
+          device.focusMode = .continuousAutoFocus
+        }
+        return
+    }
+    ReactLogger.log(level: .info, message: "Manually focusing")
+    device.setFocusModeLocked(lensPosition: manualFocus)
+   }
 
   // pragma MARK: Audio
 
