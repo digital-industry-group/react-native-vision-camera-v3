@@ -7,6 +7,7 @@ import com.mrousavy.camera.types.Orientation
 import com.mrousavy.camera.types.PixelFormat
 import com.mrousavy.camera.types.Torch
 import com.mrousavy.camera.types.VideoStabilizationMode
+import android.util.Log
 
 data class CameraConfiguration(
   // Input
@@ -30,6 +31,8 @@ data class CameraConfiguration(
   var torch: Torch = Torch.OFF,
   var videoStabilizationMode: VideoStabilizationMode = VideoStabilizationMode.OFF,
   var exposure: Double? = null,
+  var manualFocus: Double? = null,
+  var enableManualFocus: Boolean = false,
 
   // Zoom
   var zoom: Float = 1f,
@@ -81,6 +84,7 @@ data class CameraConfiguration(
   }
 
   companion object {
+    private const val TAG = "CameraConfiguration"
     fun copyOf(other: CameraConfiguration?): CameraConfiguration = other?.copy() ?: CameraConfiguration()
 
     fun difference(left: CameraConfiguration?, right: CameraConfiguration): Difference {
@@ -102,9 +106,16 @@ data class CameraConfiguration(
         left.fps != right.fps ||
         left.zoom != right.zoom ||
         left.videoStabilizationMode != right.videoStabilizationMode ||
-        left.exposure != right.exposure
+        left.exposure != right.exposure ||
+        left.manualFocus != right.manualFocus ||
+        left.enableManualFocus != right.enableManualFocus
 
       val isActiveChanged = sidePropsChanged || left?.isActive != right.isActive
+
+      Log.i(
+          TAG,
+          "Right ManualFocus: ${right?.manualFocus}, Left ManualFocus: ${left?.manualFocus}, Difference: deviceChanged: $deviceChanged, outputsChanged: $outputsChanged, sidePropsChanged: $sidePropsChanged, isActiveChanged: $isActiveChanged"
+      )
 
       return Difference(
         deviceChanged,

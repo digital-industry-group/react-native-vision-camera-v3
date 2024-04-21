@@ -71,6 +71,8 @@ class CameraView(context: Context) :
   var zoom: Float = 1f // in "factor"
   var exposure: Double = 1.0
   var orientation: Orientation = Orientation.PORTRAIT
+  var manualFocus: Double? = null
+  var enableManualFocus: Boolean = false
   var enableZoomGesture = false
     set(value) {
       field = value
@@ -201,6 +203,8 @@ class CameraView(context: Context) :
         config.enableLowLightBoost = lowLightBoost ?: false
         config.torch = torch
         config.exposure = exposure
+        config.manualFocus = manualFocus
+        config.enableManualFocus = enableManualFocus
 
         // Zoom
         config.zoom = zoom

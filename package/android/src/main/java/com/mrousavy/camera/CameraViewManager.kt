@@ -177,6 +177,16 @@ class CameraViewManager : ViewGroupManager<CameraView>() {
     view.exposure = exposure
   }
 
+  @ReactProp(name = "manualFocus")
+  fun setManualFocus(view: CameraView, manualFocus: Double) {
+    view.manualFocus = manualFocus
+  }
+
+  @ReactProp(name = "enableManualFocus")
+  fun setEnableManualFocus(view: CameraView, enableManualFocus: Boolean) {
+    view.enableManualFocus = enableManualFocus
+  }
+
   @ReactProp(name = "orientation")
   fun setOrientation(view: CameraView, orientation: String?) {
     if (orientation != null) {

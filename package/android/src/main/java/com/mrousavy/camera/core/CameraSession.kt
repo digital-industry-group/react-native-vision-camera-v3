@@ -359,7 +359,9 @@ class CameraSession(private val context: Context, private val cameraManager: Cam
         config.enableLowLightBoost,
         config.exposure,
         config.zoom,
-        config.format
+        config.manualFocus,
+        config.enableManualFocus,
+        config.format,
       )
     )
   }
