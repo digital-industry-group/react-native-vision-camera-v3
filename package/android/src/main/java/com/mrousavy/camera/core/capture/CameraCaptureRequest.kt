@@ -2,6 +2,7 @@ package com.mrousavy.camera.core.capture
 
 import android.hardware.camera2.CameraDevice
 import android.hardware.camera2.CaptureRequest
+import android.hardware.camera2.CameraCharacteristics
 import com.mrousavy.camera.core.CameraDeviceDetails
 import com.mrousavy.camera.core.FlashUnavailableError
 import com.mrousavy.camera.core.InvalidVideoHdrError
@@ -11,6 +12,7 @@ import com.mrousavy.camera.core.outputs.SurfaceOutput
 import com.mrousavy.camera.extensions.setZoom
 import com.mrousavy.camera.types.CameraDeviceFormat
 import com.mrousavy.camera.types.Torch
+import android.util.Log
 
 abstract class CameraCaptureRequest(
   private val torch: Torch = Torch.OFF,
@@ -18,6 +20,8 @@ abstract class CameraCaptureRequest(
   val enableLowLightBoost: Boolean = false,
   val exposureBias: Double? = null,
   val zoom: Float = 1.0f,
+  val manualFocus: Double? = null,
+  val enableManualFocus: Boolean = false,
   val format: CameraDeviceFormat? = null
 ) {
   enum class Template {
@@ -37,6 +41,10 @@ abstract class CameraCaptureRequest(
       }
   }
 
+  companion object {
+    private const val TAG = "CameraCaptureRequest"
+  }
+
   abstract fun createCaptureRequest(
     device: CameraDevice,
     deviceDetails: CameraDeviceDetails,
@@ -44,6 +52,8 @@ abstract class CameraCaptureRequest(
   ): CaptureRequest.Builder
 
   protected open fun createCaptureRequest(
+    manualFocus: Double?,
+    enableManualFocus: Boolean,
     template: Template,
     device: CameraDevice,
     deviceDetails: CameraDeviceDetails,
@@ -81,6 +91,17 @@ abstract class CameraCaptureRequest(
     if (torch == Torch.ON) {
       if (!deviceDetails.hasFlash) throw FlashUnavailableError()
       builder.set(CaptureRequest.FLASH_MODE, CaptureRequest.FLASH_MODE_TORCH)
+    }
+
+    // Set Manual Focus
+    if (enableManualFocus && manualFocus != null) {
+      Log.i(TAG, "Setting manual focus to $manualFocus")
+      Log.i(TAG, "min focus distance: ${deviceDetails.minFocusDistance}")
+      if (deviceDetails.afModes.contains(CameraCharacteristics.CONTROL_AF_MODE_OFF) && deviceDetails.minFocusDistance !== null) {
+        Log.i(TAG, "Setting AF mode to OFF")
+        builder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_OFF)
+        builder.set(CaptureRequest.LENS_FOCUS_DISTANCE, manualFocus.toFloat() * deviceDetails.minFocusDistance.toFloat())
+      }
     }
 
     return builder

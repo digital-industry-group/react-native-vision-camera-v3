@@ -24,6 +24,8 @@ class PhotoCaptureRequest(
   repeatingRequest.enableLowLightBoost,
   repeatingRequest.exposureBias,
   repeatingRequest.zoom,
+  repeatingRequest.manualFocus,
+  repeatingRequest.enableManualFocus,
   repeatingRequest.format
 ) {
   companion object {
@@ -55,16 +57,18 @@ class PhotoCaptureRequest(
       }
     }
     Log.i(TAG, "Using CaptureRequest Template $template...")
-    return this.createCaptureRequest(template, device, deviceDetails, outputs)
+    return this.createCaptureRequest(manualFocus, enableManualFocus, template, device, deviceDetails, outputs)
   }
 
   override fun createCaptureRequest(
+    manualFocus: Double?,
+    enableManualFocus: Boolean,
     template: Template,
     device: CameraDevice,
     deviceDetails: CameraDeviceDetails,
     outputs: List<SurfaceOutput>
   ): CaptureRequest.Builder {
-    val builder = super.createCaptureRequest(template, device, deviceDetails, outputs)
+    val builder = super.createCaptureRequest(manualFocus, enableManualFocus, template, device, deviceDetails, outputs)
 
     // Set various speed vs quality optimization flags
     when (qualityPrioritization) {

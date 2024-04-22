@@ -24,15 +24,17 @@ class RepeatingCaptureRequest(
   enableLowLightBoost: Boolean = false,
   exposureBias: Double? = null,
   zoom: Float = 1.0f,
+  manualFocus: Double? = null,
+  enableManualFocus: Boolean = false,
   format: CameraDeviceFormat? = null
-) : CameraCaptureRequest(torch, enableVideoHdr, enableLowLightBoost, exposureBias, zoom, format) {
+) : CameraCaptureRequest(torch, enableVideoHdr, enableLowLightBoost, exposureBias, zoom, manualFocus, enableManualFocus, format) {
   override fun createCaptureRequest(
     device: CameraDevice,
     deviceDetails: CameraDeviceDetails,
     outputs: List<SurfaceOutput>
   ): CaptureRequest.Builder {
     val template = if (enableVideoPipeline) Template.RECORD else Template.PREVIEW
-    return this.createCaptureRequest(template, device, deviceDetails, outputs)
+    return this.createCaptureRequest(manualFocus, enableManualFocus, template, device, deviceDetails, outputs)
   }
 
   private fun getBestDigitalStabilizationMode(deviceDetails: CameraDeviceDetails): Int {
@@ -45,27 +47,31 @@ class RepeatingCaptureRequest(
   }
 
   override fun createCaptureRequest(
+    manualFocus: Double?,
+    enableManualFocus: Boolean,
     template: Template,
     device: CameraDevice,
     deviceDetails: CameraDeviceDetails,
     outputs: List<SurfaceOutput>
   ): CaptureRequest.Builder {
-    val builder = super.createCaptureRequest(template, device, deviceDetails, outputs)
+    val builder = super.createCaptureRequest(manualFocus, enableManualFocus, template, device, deviceDetails, outputs)
 
     if (deviceDetails.modes.contains(CameraCharacteristics.CONTROL_MODE_AUTO)) {
       builder.set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_AUTO)
     }
 
-    // Set AF
-    if (enableVideoPipeline && deviceDetails.afModes.contains(CameraCharacteristics.CONTROL_AF_MODE_CONTINUOUS_VIDEO)) {
-      builder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_VIDEO)
-    } else if (deviceDetails.afModes.contains(CameraCharacteristics.CONTROL_AF_MODE_CONTINUOUS_PICTURE)) {
-      builder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE)
-    } else if (deviceDetails.afModes.contains(CameraCharacteristics.CONTROL_AF_MODE_AUTO)) {
-      builder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_AUTO)
-    } else if (deviceDetails.afModes.contains(CameraCharacteristics.CONTROL_AF_MODE_OFF)) {
-      builder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_OFF)
-      builder.set(CaptureRequest.LENS_FOCUS_DISTANCE, 0f)
+    // Set AF of Manual Focus
+    if (!enableManualFocus) {
+      if (enableVideoPipeline && deviceDetails.afModes.contains(CameraCharacteristics.CONTROL_AF_MODE_CONTINUOUS_VIDEO)) {
+        builder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_VIDEO)
+      } else if (deviceDetails.afModes.contains(CameraCharacteristics.CONTROL_AF_MODE_CONTINUOUS_PICTURE)) {
+        builder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE)
+      } else if (deviceDetails.afModes.contains(CameraCharacteristics.CONTROL_AF_MODE_AUTO)) {
+        builder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_AUTO)
+      } else if (deviceDetails.afModes.contains(CameraCharacteristics.CONTROL_AF_MODE_OFF)) {
+        builder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_OFF)
+        builder.set(CaptureRequest.LENS_FOCUS_DISTANCE, 0f)
+      }
     }
 
     // Set AE
