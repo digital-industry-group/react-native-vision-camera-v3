@@ -144,31 +144,6 @@ class CameraSession: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate, AVC
 
         // If needed, configure the AVCaptureDevice (format, zoom, low-light-boost, ..)
         if difference.isDeviceConfigurationDirty {
-          try self.withDeviceLock { device in
-            // 4. Configure format
-            if difference.formatChanged {
-              try self.configureFormat(configuration: config, device: device)
-            }
-            // 5. After step 2. and 4., we also need to configure the PixelFormat.
-            //    This needs to be done AFTER we updated the `format`, as this controls the supported PixelFormats.
-            if difference.outputsChanged || difference.formatChanged {
-              try self.configurePixelFormat(configuration: config)
-            }
-            // 6. Configure side-props (fps, lowLightBoost)
-            if difference.sidePropsChanged {
-              try self.configureSideProps(configuration: config, device: device)
-            }
-            // 7. Configure zoom
-            if difference.zoomChanged {
-              self.configureZoom(configuration: config, device: device)
-            }
-            // 8. Configure exposure bias
-            if difference.exposureChanged {
-              self.configureExposure(configuration: config, device: device)
-            }
-            if difference.manualFocusChanged {
-              self.configureManualFocus(configuration: config, device: device)
-            }
           try device.lockForConfiguration()
           defer {
             device.unlockForConfiguration()
@@ -194,6 +169,9 @@ class CameraSession: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate, AVC
           // 8. Configure exposure bias
           if difference.exposureChanged {
             self.configureExposure(configuration: config, device: device)
+          }
+          if difference.manualFocusChanged {
+            self.configureManualFocus(configuration: config, device: device)
           }
         }
 
